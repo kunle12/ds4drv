@@ -6,7 +6,7 @@ from select import epoll, EPOLLIN
 
 from .packages import timerfd
 from .utils import iter_except
-
+import time
 
 class Timer(object):
     """Simple interface around a timerfd connected to a event loop."""
@@ -95,14 +95,19 @@ class EventLoop(object):
             for callback in self.event_callbacks[event]:
                 callback(*args)
 
-    def run(self):
+    def run(self, fps = 20):
         """Starts the loop."""
         self.running = True
+        interval = 1.0 / fps
         while self.running:
+            ts1 = time.monotonic()
             for fd, event in self.epoll.poll(self.epoll_timeout):
                 callback = self.callbacks.get(fd)
                 if callback:
                     callback()
+            tsdiff = time.monotonic() - ts1
+            if interval > tsdiff:
+                time.sleep(interval - tsdiff)
 
     def stop(self):
         """Stops the loop."""
